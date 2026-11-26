@@ -4,5 +4,9 @@
   "scripts": {
     "dev": "sh -c 'exec python3 -m http.server \"${PORT:-4173}\" --bind 127.0.0.1' --",
     "test": "node --test"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.5",
+    "jsdom": "27.4.0"
   }
 }

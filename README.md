@@ -12,7 +12,7 @@ npm run dev
 
 通常版は `http://localhost:4173/` です。承認済みの問題を `data/questions.json` に登録すると研修を開始できます。承認待ちの教材は Git に登録せず、手元の `dev/questions.json` に置き、`http://localhost:4173/?dev=1` で開きます。開発モードの履歴は通常版と別に保存します。
 
-採点ロジックのテストは `npm test` で実行できます。
+自動テストは Node.js 24 で `npm ci` の後に `npm test` で実行できます。採点に加え、架空データで回答、解説、総合評価、学習履歴の画面の処理を確認します。
 
 問題データは配列です。各問題に `id`、`industry`、`audience`（初期対象は `customer-staff`）、`category`（`hearing` または `proposal`）、`difficulty`（`beginner`）、`scene`、`prompt`、`options`、`skills`、`status`（`pending` または `approved`）を指定します。選択肢は各4件で、`id`、`text`、`score`、`explanation` を持ちます。スキルIDは `app/training.mjs` を参照してください。
 
