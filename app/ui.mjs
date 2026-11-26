@@ -68,19 +68,26 @@ function availableCategories() {
   return Object.keys(categories).filter((key) => questionsFor(bank, key, development).length >= questionsPerSet);
 }
 
-function home() {
-  session = undefined;
-  show('今日の接客を、少し上手に。', 'お客様係のための接客研修');
+function updateHomeProgress() {
+  const overview = screen.querySelector('#home-progress');
+  if (!overview) return;
   const stats = totals(history);
   const progress = element('progress');
   progress.max = 200;
   progress.value = stats.progress;
   progress.setAttribute('aria-label', '次のレベルまでの経験値');
-  const overview = panel('学習の進捗', 'overview');
-  append(overview,
+  overview.replaceChildren(element('h2', '', '学習の進捗'),
     append(element('div', 'metrics'), metric('レベル', stats.level), metric('経験値', `${stats.xp} XP`), metric('コイン', stats.coins)),
     progress, element('p', 'muted', `次のレベルまで ${200 - stats.progress} XP`));
+}
+
+function home() {
+  session = undefined;
+  show('今日の接客を、少し上手に。', 'お客様係のための接客研修');
+  const overview = element('section', 'panel overview');
+  overview.id = 'home-progress';
   append(screen, overview, actions(button('研修を始める', selectTraining), button('学習履歴', showHistory, 'secondary')));
+  updateHomeProgress();
   if (storageError) screen.append(element('p', 'notice', 'このブラウザーでは履歴を保存できません。保存を許可すると研修を記録できます。'));
 }
 
@@ -139,6 +146,15 @@ function showQuestion() {
     const choice = new FormData(form).get('option');
     if (session !== current || current.answers.length !== index || !question.options.some((option) => option.id === choice)) return;
     current.answers.push(choice);
+    if (current.answers.length === current.questions.length) {
+      current.result = evaluate(current.questions, current.answers);
+      current.earned = rewards(current.result.score);
+      current.attempt = {
+        id: current.id, category: current.category, completedAt: new Date().toISOString(),
+        score: current.result.score, ...current.earned,
+      };
+      persist(current);
+    }
     showExplanation(index);
   });
   append(form, element('p', 'scene', question.scene), fieldset, confirm);
@@ -169,29 +185,35 @@ function showExplanation(index) {
   append(screen, append(panel(`この問題は ${choice.score} / 20点`), options), actions(next));
 }
 
+function persist(current) {
+  current.persistence ??= (async () => {
+    db ??= await openHistory(development);
+    await saveAttempt(db, current.attempt);
+    storageError = false;
+    try {
+      history = await getHistory(db);
+    } catch (error) {
+      console.warn('保存した履歴の読み取りに失敗しました。', error);
+      if (!history.some((entry) => entry.id === current.id)) history = [current.attempt, ...history];
+    }
+    updateHomeProgress();
+    return true;
+  })().catch((error) => {
+    console.warn('履歴の保存に失敗しました。', error);
+    current.persistence = undefined;
+    return false;
+  });
+  return current.persistence;
+}
+
 async function finish(current) {
   if (current.finishing) return;
   current.finishing = true;
   show('総合評価', categories[current.category].name);
   screen.append(element('p', 'muted', '結果を集計しています…'));
-  const result = evaluate(current.questions, current.answers);
-  const earned = rewards(result.score);
-  current.attempt ??= {
-    id: current.id, category: current.category, completedAt: new Date().toISOString(),
-    score: result.score, ...earned,
-  };
-  let saved = false;
-  try {
-    db ??= await openHistory(development);
-    await saveAttempt(db, current.attempt);
-    saved = true;
-    history = await getHistory(db);
-    storageError = false;
-  } catch (error) {
-    console.warn('履歴の保存または読み取りに失敗しました。', error);
-  }
+  const saved = await persist(current);
   current.finishing = false;
-  if (session === current) showResults(current, result, earned, saved);
+  if (session === current) showResults(current, current.result, current.earned, saved);
 }
 
 function drawRadar(canvas, ratings) {

@@ -1,4 +1,4 @@
-const cacheName = 'sekkyaku-shell-v1';
+const cacheName = 'sekkyaku-shell-v2';
 const shell = [
   './', './index.html', './styles.css', './app/ui.mjs', './app/training.mjs',
   './app/storage.mjs', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
