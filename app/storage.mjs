@@ -27,3 +27,24 @@ export function saveAttempt(db, attempt) {
     transaction.onabort = () => reject(transaction.error ?? new Error('履歴を保存できませんでした。'));
   });
 }
+
+export function createHistoryStore(development) {
+  let connection;
+
+  function connect() {
+    connection ??= openHistory(development).catch((error) => {
+      connection = undefined;
+      throw error;
+    });
+    return connection;
+  }
+
+  return {
+    async list() {
+      return getHistory(await connect());
+    },
+    async save(attempt) {
+      await saveAttempt(await connect(), attempt);
+    },
+  };
+}

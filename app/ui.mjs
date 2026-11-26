@@ -1,5 +1,5 @@
 import { categories, skills, questionsPerSet, validateQuestions, questionsFor, createQuestions, evaluate, rewards, totals, feedback } from './training.mjs';
-import { openHistory, getHistory, saveAttempt } from './storage.mjs';
+import { createHistoryStore } from './storage.mjs';
 
 const screen = document.querySelector('#screen');
 const localHosts = ['localhost', '127.0.0.1', '[::1]'];
@@ -7,7 +7,7 @@ const development = localHosts.includes(location.hostname) && new URLSearchParam
 const trainingData = development ? './dev/questions.json' : './data/questions.json';
 let bank = [];
 let history = [];
-let db;
+const historyStore = createHistoryStore(development);
 let session;
 let dataError = false;
 let storageError = false;
@@ -187,11 +187,10 @@ function showExplanation(index) {
 
 function persist(current) {
   current.persistence ??= (async () => {
-    db ??= await openHistory(development);
-    await saveAttempt(db, current.attempt);
+    await historyStore.save(current.attempt);
     storageError = false;
     try {
-      history = await getHistory(db);
+      history = await historyStore.list();
     } catch (error) {
       console.warn('保存した履歴の読み取りに失敗しました。', error);
       if (!history.some((entry) => entry.id === current.id)) history = [current.attempt, ...history];
@@ -308,10 +307,11 @@ function showResults(current, result, earned, saved) {
 async function showHistory() {
   show('学習履歴');
   const heading = screen.querySelector('h1');
-  let readError = storageError;
-  if (db) {
-    try { history = await getHistory(db); }
-    catch { readError = true; }
+  let readError = false;
+  try {
+    history = await historyStore.list();
+  } catch {
+    readError = true;
   }
   if (!heading.isConnected) return;
   if (readError) screen.append(element('p', 'notice', 'この端末の履歴を読み取れませんでした。'));
@@ -336,10 +336,9 @@ const loadBank = fetch(trainingData).then((response) => {
   console.warn('問題データを読み込めませんでした。', error);
   dataError = true;
 });
-const loadHistory = openHistory(development).then((database) => {
-  db = database;
-  return getHistory(db);
-}).then((entries) => { history = entries; }).catch((error) => {
+const loadHistory = historyStore.list().then((entries) => {
+  history = entries;
+}).catch((error) => {
   console.warn('履歴を読み込めませんでした。', error);
   storageError = true;
 });

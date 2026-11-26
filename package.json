@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "sh -c 'exec python3 -m http.server \"${PORT:-4173}\" --bind 127.0.0.1' --",
     "test": "node --test",
-    "build:public": "node scripts/build-public.mjs"
+    "build:public": "node scripts/build-app.mjs public",
+    "build:trial": "node scripts/build-app.mjs trial",
+    "serve:trial": "python3 scripts/serve-trial.py"
   },
   "devDependencies": {
     "fake-indexeddb": "6.2.5",

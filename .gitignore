@@ -3,4 +3,5 @@
 
 /node_modules/
 /dist/
-/.public-build-*/
+/private-dist/
+/.app-build-*/
